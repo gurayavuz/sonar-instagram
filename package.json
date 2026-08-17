@@ -1,0 +1,19 @@
+{
+  "name": "sonar",
+  "version": "1.0.0",
+  "description": "Sonar — console tool that lists the Instagram accounts you follow who don't follow you back.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs && node dev-server.mjs",
+    "test": "node test/run.mjs",
+    "test:live": "node test/live.mjs",
+    "test:visual": "node test/visual.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1",
+    "playwright": "^1.62.1"
+  }
+}

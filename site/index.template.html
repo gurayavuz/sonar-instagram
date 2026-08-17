@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sonar — who doesn't follow you back on Instagram</title>
+    <meta
+      name="description"
+      content="Paste one script into your browser and see who you follow that never followed you back. It all happens in your own tab — nothing is uploaded anywhere."
+    />
+    <meta name="theme-color" content="#000080" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000080'/%3E%3Cg fill='none' stroke='%23ffffff'%3E%3Ccircle cx='16' cy='16' r='11' opacity='.4'/%3E%3Ccircle cx='16' cy='16' r='6.5' opacity='.7'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='2.6' fill='%23ffffff'/%3E%3C/svg%3E"
+    />
+    <style>
+      *,
+      *::before,
+      *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --navy: #000080;
+        --navy-lit: #0000a8;
+        --ink: #0b0b1f;
+        --muted: #5a5f80;
+        --faint: #8b90ad;
+        --line: #c9cde6;
+        --hair: #e6e8f5;
+        --tint: #eef0fa;
+        --white: #ffffff;
+        --mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+      }
+
+      html { scroll-behavior: smooth; }
+      body {
+        background: var(--white);
+        color: var(--ink);
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .shell { width: min(860px, calc(100% - 40px)); margin: 0 auto; }
+
+      /* ---- masthead ---- */
+      header.top {
+        position: sticky; top: 0; z-index: 10;
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .top-inner { display: flex; align-items: center; gap: 12px; padding: 13px 0; }
+      .brand {
+        display: flex; align-items: center; gap: 10px; color: var(--navy);
+        font-weight: 700; font-size: 14px; letter-spacing: 0.19em; text-transform: uppercase;
+      }
+      .brand .sq { position: relative; width: 13px; height: 13px; }
+      .brand .sq::before, .brand .sq::after {
+        content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        border: 1px solid var(--navy); border-radius: 50%;
+      }
+      .brand .sq::before { width: 13px; height: 13px; opacity: 0.45; }
+      .brand .sq::after { width: 5px; height: 5px; background: var(--navy); }
+      .top nav { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+      .ghost {
+        border: 1px solid transparent; background: none; color: var(--muted);
+        font: inherit; font-size: 13px; padding: 6px 11px; border-radius: 3px; cursor: pointer; text-decoration: none;
+      }
+      .ghost:hover { color: var(--navy); background: var(--tint); }
+      .ghost.on { color: var(--navy); border-color: var(--line); font-weight: 600; }
+
+      /* ---- inverted hero ---- */
+      .hero { position: relative; background: var(--navy); color: var(--white); padding: 76px 0 68px; overflow: hidden; }
+      .hero::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px);
+      }
+      .hero .shell { position: relative; z-index: 1; }
+      .hero-grid { display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center; }
+
+      /* the scope: range rings, rotating sweep, contacts */
+      .scope { position: relative; width: 230px; height: 230px; flex: none; }
+      .scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .scope svg circle { fill: none; stroke: rgba(255, 255, 255, 0.26); stroke-width: 0.6; }
+      .scope svg line { stroke: rgba(255, 255, 255, 0.16); stroke-width: 0.6; }
+      .scope .sweep {
+        position: absolute; inset: 0; border-radius: 50%;
+        background: conic-gradient(from 0deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.06) 40deg, transparent 88deg);
+        animation: spin 3.4s linear infinite;
+      }
+      .scope .sweep::after {
+        content: ""; position: absolute; left: 50%; top: 0; width: 1px; height: 50%;
+        background: linear-gradient(rgba(255, 255, 255, 0.9), transparent);
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .scope .blip {
+        position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+        background: var(--white); opacity: 0; animation: blip 3.4s linear infinite;
+      }
+      @keyframes blip {
+        0% { opacity: 0; transform: scale(1.7); }
+        4% { opacity: 1; transform: scale(1); }
+        70% { opacity: 0.18; }
+        100% { opacity: 0; }
+      }
+      .scope .core { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px;
+        border-radius: 50%; background: var(--white); }
+      @media (prefers-reduced-motion: reduce) {
+        .scope .sweep, .scope .blip { animation: none; }
+        .scope .blip { opacity: 0.55; }
+      }
+      .eyebrow {
+        font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--navy); margin-bottom: 14px;
+      }
+      .hero .eyebrow { color: rgba(255, 255, 255, 0.62); }
+      h1 { font-size: clamp(32px, 6.2vw, 52px); line-height: 1.08; letter-spacing: -0.03em; font-weight: 600; }
+      h1 u { text-decoration: none; border-bottom: 4px solid rgba(255, 255, 255, 0.42); padding-bottom: 2px; }
+      .lede { margin-top: 20px; font-size: 16.5px; color: rgba(255, 255, 255, 0.78); max-width: 56ch; }
+
+      .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; align-items: center; }
+      button.solid {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: var(--white); color: var(--navy); border: 1px solid var(--white);
+        border-radius: 3px; padding: 13px 22px; font: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+      }
+      button.solid:hover { background: var(--tint); }
+      button.solid.done { background: var(--navy); color: var(--white); }
+      a.hollow {
+        display: inline-flex; align-items: center;
+        background: transparent; color: var(--white); border: 1px solid rgba(255, 255, 255, 0.45);
+        border-radius: 3px; padding: 13px 20px; font-weight: 600; font-size: 14px; text-decoration: none;
+      }
+      a.hollow:hover { border-color: var(--white); background: rgba(255, 255, 255, 0.1); }
+      .hero .meta { color: rgba(255, 255, 255, 0.5); font-size: 12px; font-family: var(--mono); letter-spacing: 0.02em; }
+
+      /* ---- sections ---- */
+      section { padding: 62px 0; }
+      section + section { border-top: 1px solid var(--hair); }
+      h2 { font-size: 25px; font-weight: 600; letter-spacing: -0.022em; color: var(--navy); }
+      .sub { color: var(--muted); font-size: 14.5px; margin-top: 6px; margin-bottom: 30px; max-width: 58ch; }
+
+      /* ---- steps ---- */
+      ol.steps { list-style: none; counter-reset: step; display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+      ol.steps li { counter-increment: step; border-top: 2px solid var(--navy); padding-top: 14px; }
+      ol.steps li::before {
+        content: counter(step, decimal-leading-zero);
+        display: block; font-family: var(--mono); font-size: 11px; font-weight: 500;
+        color: var(--navy); letter-spacing: 0.1em; margin-bottom: 9px;
+      }
+      ol.steps b { display: block; font-weight: 600; font-size: 15px; margin-bottom: 5px; }
+      ol.steps p { color: var(--muted); font-size: 13.5px; }
+
+      kbd {
+        font-family: var(--mono); font-size: 11.5px;
+        background: var(--tint); border: 1px solid var(--line);
+        border-radius: 2px; padding: 2px 6px; color: var(--navy); white-space: nowrap; font-weight: 500;
+      }
+
+      /* ---- cards ---- */
+      .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+      .card { background: var(--white); border: 1px solid var(--line); border-top: 3px solid var(--navy); padding: 20px; }
+      .card b { display: block; font-size: 14.5px; font-weight: 600; margin-bottom: 6px; color: var(--navy); }
+      .card p { color: var(--muted); font-size: 13.5px; }
+
+      /* ---- warning ---- */
+      .note { border-left: 4px solid var(--navy); background: var(--tint); padding: 20px 22px; margin-top: 26px; }
+      .note .eyebrow { margin-bottom: 8px; }
+      .note p { color: var(--ink); font-size: 13.5px; max-width: 66ch; }
+      .note p + p { margin-top: 10px; }
+
+      /* ---- source ---- */
+      details.src { border: 1px solid var(--line); margin-top: 26px; }
+      details.src summary {
+        cursor: pointer; padding: 14px 18px; font-size: 14px; font-weight: 600; color: var(--navy);
+        background: var(--tint); display: flex; align-items: center; gap: 9px; list-style: none;
+      }
+      details.src summary::-webkit-details-marker { display: none; }
+      details.src summary::before { content: "+"; font-family: var(--mono); }
+      details.src[open] summary::before { content: "–"; }
+      details.src pre {
+        margin: 0; padding: 18px; border-top: 1px solid var(--line);
+        max-height: 400px; overflow: auto; font-family: var(--mono); font-size: 11.5px;
+        line-height: 1.6; color: var(--ink); white-space: pre; tab-size: 2; background: var(--white);
+      }
+
+      /* ---- faq ---- */
+      .faq details { border-bottom: 1px solid var(--hair); }
+      .faq details:first-child { border-top: 1px solid var(--hair); }
+      .faq summary {
+        cursor: pointer; padding: 17px 2px; font-size: 15px; font-weight: 500; list-style: none;
+        display: flex; gap: 12px; align-items: baseline; color: var(--ink);
+      }
+      .faq summary:hover { color: var(--navy); }
+      .faq summary::-webkit-details-marker { display: none; }
+      .faq summary::after { content: "+"; margin-left: auto; color: var(--navy); font-family: var(--mono); }
+      .faq details[open] summary { color: var(--navy); font-weight: 600; }
+      .faq details[open] summary::after { content: "–"; }
+      .faq p { padding: 0 2px 18px; color: var(--muted); font-size: 14px; max-width: 64ch; }
+
+      /* ---- footer bookend ---- */
+      footer {
+        background: var(--navy); color: rgba(255, 255, 255, 0.66);
+        padding: 34px 0; font-size: 12.5px;
+      }
+      footer .shell { display: flex; flex-wrap: wrap; gap: 8px 26px; align-items: center; }
+      footer .sq { width: 9px; height: 9px; background: var(--white); }
+
+      [data-tr] { display: none; }
+      html[lang="tr"] [data-tr] { display: revert; }
+      html[lang="tr"] [data-en] { display: none; }
+
+      @media (max-width: 760px) {
+        .hero-grid { grid-template-columns: 1fr; }
+        .scope { display: none; }
+      }
+      @media (max-width: 560px) {
+        .hero { padding: 54px 0 48px; }
+        section { padding: 46px 0; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="top">
+      <div class="shell top-inner">
+        <span class="brand"><span class="sq"></span>Sonar</span>
+        <nav>
+          <a class="ghost" href="#how"><span data-en>How it works</span><span data-tr>Nasıl çalışıyor</span></a>
+          <a class="ghost" href="#privacy"><span data-en>Privacy</span><span data-tr>Gizlilik</span></a>
+          <button class="ghost on" id="lang" type="button">TR</button>
+        </nav>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="shell">
+      <div class="hero-grid">
+      <div>
+        <p class="eyebrow"><span data-en>A small script for your browser</span><span data-tr>Tarayıcın için küçük bir kod</span></p>
+        <h1>
+          <span data-en>Find out who's <u>not following you back</u>.</span>
+          <span data-tr>Seni <u>geri takip etmeyenleri</u> gör.</span>
+        </h1>
+        <p class="lede">
+          <span data-en>
+            Paste one script into your browser and it quietly works through everyone you follow, noting who followed
+            you back and who never did. You end up with a list you can search, tidy up, save, or act on. No sign-up,
+            no extension, nothing sent anywhere.
+          </span>
+          <span data-tr>
+            Tarayıcına tek bir kod yapıştırıyorsun; takip ettiğin herkesi tek tek gezip kimin seni geri takip
+            ettiğine, kimin hiç etmediğine bakıyor. Sonunda arayabileceğin, düzenleyebileceğin, kaydedebileceğin bir
+            liste çıkıyor. Üyelik yok, eklenti yok, hiçbir yere veri gitmiyor.
+          </span>
+        </p>
+
+        <div class="cta">
+          <button class="solid" id="copy" type="button">
+            <span data-en>Copy the script</span><span data-tr>Kodu kopyala</span>
+          </button>
+          <a class="hollow" href="https://www.instagram.com/" target="_blank" rel="noreferrer">
+            <span data-en>Open Instagram</span><span data-tr>Instagram'ı aç</span>
+          </a>
+          <span class="meta">__SIZE__ · JavaScript · MIT</span>
+        </div>
+      </div>
+
+        <div class="scope" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="49" /><circle cx="50" cy="50" r="37" />
+            <circle cx="50" cy="50" r="25" /><circle cx="50" cy="50" r="13" />
+            <line x1="50" y1="1" x2="50" y2="99" /><line x1="1" y1="50" x2="99" y2="50" />
+          </svg>
+          <div class="sweep"></div>
+          <span class="blip" style="left: 64%; top: 31%; animation-delay: 0.15s"></span>
+          <span class="blip" style="left: 33%; top: 70%; animation-delay: 1.1s"></span>
+          <span class="blip" style="left: 76%; top: 63%; animation-delay: 0.75s"></span>
+          <span class="blip" style="left: 27%; top: 37%; animation-delay: 2.3s"></span>
+          <span class="blip" style="left: 55%; top: 84%; animation-delay: 1.7s"></span>
+          <span class="blip" style="left: 44%; top: 19%; animation-delay: 2.8s"></span>
+          <span class="core"></span>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <main>
+      <section class="shell" id="how">
+        <p class="eyebrow"><span data-en>Getting started</span><span data-tr>Başlarken</span></p>
+        <h2><span data-en>It takes about a minute</span><span data-tr>Aşağı yukarı bir dakika sürüyor</span></h2>
+        <p class="sub">
+          <span data-en>You'll need a computer for this one — phone browsers don't have a console to paste into.</span>
+          <span data-tr>Bunun için bilgisayar lazım — telefon tarayıcılarında kodu yapıştıracağın konsol yok.</span>
+        </p>
+        <ol class="steps">
+          <li>
+            <b><span data-en>Open Instagram and sign in</span><span data-tr>Instagram'ı aç ve giriş yap</span></b>
+            <p>
+              <span data-en>Just a normal tab, logged in as usual. The script borrows that session, so it never asks for your password — and you shouldn't hand your password to anything that does.</span>
+              <span data-tr>Normal bir sekme, her zamanki gibi giriş yapmış hâlde. Kod o oturumu kullanıyor, yani şifreni hiç sormuyor — zaten şifreni isteyen hiçbir şeye vermemelisin.</span>
+            </p>
+          </li>
+          <li>
+            <b><span data-en>Open the console</span><span data-tr>Konsolu aç</span></b>
+            <p>
+              <span data-en><kbd>⌘ ⌥ J</kbd> on a Mac, <kbd>Ctrl Shift J</kbd> on Windows or Linux. If your browser makes you type <kbd>allow pasting</kbd> first, that's normal — it's protecting you from exactly this sort of thing, so do read the script before you trust it.</span>
+              <span data-tr>Mac'te <kbd>⌘ ⌥ J</kbd>, Windows ve Linux'ta <kbd>Ctrl Shift J</kbd>. Tarayıcın önce <kbd>allow pasting</kbd> yazmanı isterse bu normal — seni tam da böyle şeylere karşı koruyor, o yüzden güvenmeden önce kodu bir oku.</span>
+            </p>
+          </li>
+          <li>
+            <b><span data-en>Paste it in and hit enter</span><span data-tr>Yapıştır ve enter'a bas</span></b>
+            <p>
+              <span data-en>A small panel appears in the corner of the page. Drag it wherever suits you, or tuck it away while it works.</span>
+              <span data-tr>Sayfanın köşesinde küçük bir panel açılıyor. İstediğin yere sürükleyebilir, çalışırken bir kenara da katlayabilirsin.</span>
+            </p>
+          </li>
+          <li>
+            <b><span data-en>Have a look, then decide</span><span data-tr>Listeye bak, sonra karar ver</span></b>
+            <p>
+              <span data-en>Start it and give it a minute. Hide the accounts you follow on purpose, then copy the rest, save them to a file, or unfollow in bulk.</span>
+              <span data-tr>Başlat ve bir dakika bekle. Bilerek takip ettiklerini gizle, kalanları kopyala, dosyaya kaydet ya da topluca takipten çık.</span>
+            </p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="shell" id="privacy">
+        <p class="eyebrow"><span data-en>Under the hood</span><span data-tr>Kapağın altında</span></p>
+        <h2><span data-en>What it's actually doing</span><span data-tr>Aslında ne yapıyor</span></h2>
+        <p class="sub">
+          <span data-en>Nothing clever tucked away — the whole thing is a few hundred lines, and you can read them below.</span>
+          <span data-tr>Gizli saklı bir şey yok — tamamı, aşağıda okuyabileceğin birkaç yüz satır.</span>
+        </p>
+        <div class="cards">
+          <div class="card">
+            <b><span data-en>It never leaves your tab</span><span data-tr>Sekmenden hiç çıkmıyor</span></b>
+            <p>
+              <span data-en>Every request goes straight to Instagram from the session you're already signed in to. There's no server of ours in the middle, no analytics, nothing phoning home.</span>
+              <span data-tr>Bütün istekler, zaten giriş yapmış olduğun oturumdan doğrudan Instagram'a gidiyor. Arada bizim bir sunucumuz yok, analitik yok, hiçbir yere haber gitmiyor.</span>
+            </p>
+          </div>
+          <div class="card">
+            <b><span data-en>It only has to ask once</span><span data-tr>Tek seferde soruyor</span></b>
+            <p>
+              <span data-en>Instagram already tells us, for each person you follow, whether they follow you back. So an ordinary look-through only reads your following list — half the requests, half the waiting.</span>
+              <span data-tr>Instagram zaten takip ettiğin her kişi için onun seni takip edip etmediğini söylüyor. Bu yüzden sıradan bir tarama sadece takip listeni okuyor — yarı yarıya daha az istek, yarı yarıya daha az bekleme.</span>
+            </p>
+          </div>
+          <div class="card">
+            <b><span data-en>It goes slowly on purpose</span><span data-tr>Bilerek ağırdan alıyor</span></b>
+            <p>
+              <span data-en>Random waits between pages, a longer break every few, and it backs off by itself if Instagram asks it to. Unfollowing is slower still, and stops the moment Instagram pushes back.</span>
+              <span data-tr>Sayfalar arasında rastgele beklemeler, birkaç sayfada bir uzun mola; Instagram rica ederse kendi kendine yavaşlıyor. Takipten çıkma daha da yavaş ve Instagram itiraz ettiği anda duruyor.</span>
+            </p>
+          </div>
+          <div class="card">
+            <b><span data-en>The list is yours</span><span data-tr>Liste sana ait</span></b>
+            <p>
+              <span data-en>The accounts you hide and the settings you change stay in this browser. The results themselves are never written down anywhere — close the tab and they're gone.</span>
+              <span data-tr>Gizlediğin hesaplar ve değiştirdiğin ayarlar bu tarayıcıda kalıyor. Sonuçların kendisi hiçbir yere yazılmıyor — sekmeyi kapattığın anda gidiyorlar.</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="note">
+          <p class="eyebrow"><span data-en>Worth reading before you unfollow anyone</span><span data-tr>Kimseyi bırakmadan önce şunu bir oku</span></p>
+          <p>
+            <span data-en>Unfollowing a lot of people quickly is the thing that gets accounts temporarily blocked. Out of the box this leaves 6 to 12 seconds between each one and takes a five-minute break every fifth — please don't rush it along. If the panel tells you Instagram stepped in, stop there and come back in a few hours.</span>
+            <span data-tr>Kısa sürede çok kişiyi takipten çıkarmak, hesapların geçici olarak engellenmesinin bir numaralı sebebi. Bu yüzden varsayılan olarak her hesap arasında 6-12 saniye bekliyor, her beşincide de beş dakika mola veriyor — lütfen acele ettirme. Panel Instagram'ın araya girdiğini söylerse orada dur ve birkaç saat sonra dön.</span>
+          </p>
+          <p>
+            <span data-en>And to be straight with you: automating Instagram goes against its terms of use. Reading your own following list is about as mild as that gets; unfollowing hundreds of people is not. It's your account and your call.</span>
+            <span data-tr>Açık konuşalım: Instagram'ı otomatikleştirmek kullanım koşullarına aykırı. Kendi takip listeni okumak bunun en masum hâli; yüzlerce kişiyi takipten çıkarmak değil. Hesap senin, karar da senin.</span>
+          </p>
+        </div>
+
+        <details class="src">
+          <summary><span data-en>Read the script before you paste it</span><span data-tr>Yapıştırmadan önce kodu oku</span></summary>
+          <pre id="code"></pre>
+        </details>
+      </section>
+
+      <section class="shell">
+        <p class="eyebrow"><span data-en>Questions</span><span data-tr>Sorular</span></p>
+        <h2><span data-en>Things people ask</span><span data-tr>Merak edilenler</span></h2>
+        <p class="sub">
+          <span data-en>All fair things to wonder before pasting a stranger's code into your browser.</span>
+          <span data-tr>Bir yabancının kodunu tarayıcına yapıştırmadan önce sorulması gayet normal şeyler.</span>
+        </p>
+        <div class="faq">
+          <details>
+            <summary><span data-en>Do I need to give it my password?</span><span data-tr>Şifremi vermem gerekiyor mu?</span></summary>
+            <p>
+              <span data-en>No — and please don't hand your Instagram password to anything, ever. This runs in a tab where you're already signed in and uses that session, the same way the Instagram website itself does. If some tool asks you to log in to it, close the tool.</span>
+              <span data-tr>Hayır — ve lütfen Instagram şifreni hiçbir şeye verme. Bu kod, zaten giriş yapmış olduğun sekmede çalışıyor ve tıpkı Instagram'ın kendi sitesi gibi o oturumu kullanıyor. Senden kendisine giriş yapmanı isteyen bir araç görürsen kapat gitsin.</span>
+            </p>
+          </details>
+          <details>
+            <summary><span data-en>How long does it take?</span><span data-tr>Ne kadar sürüyor?</span></summary>
+            <p>
+              <span data-en>A page of 24 accounts every second and a half or so, with a short break every fifth page. If you follow around a thousand people, that's roughly two minutes. Loading your followers as well takes a while longer.</span>
+              <span data-tr>Bir buçuk saniyede bir 24 kişilik sayfa, her beşinci sayfada da kısa bir mola. Bin kişiyi takip ediyorsan aşağı yukarı iki dakika. Takipçilerini de yüklersen biraz daha uzuyor.</span>
+            </p>
+          </details>
+          <details>
+            <summary><span data-en>What's "also load my followers" for?</span><span data-tr>"Takipçilerimi de yükle" ne işe yarıyor?</span></summary>
+            <p>
+              <span data-en>Without it you get one answer: who isn't following you back. With it you also get the people who follow you that you never followed back, and everyone you follow both ways. It costs a second pass through the list.</span>
+              <span data-tr>O olmadan tek bir cevap alıyorsun: kim seni geri takip etmiyor. Onunla birlikte, seni takip edip de senin hiç geri takip etmediklerini ve karşılıklı takipleştiklerini de görüyorsun. Karşılığında liste bir kez daha baştan geziliyor.</span>
+            </p>
+          </details>
+          <details>
+            <summary><span data-en>It stopped with an error — what now?</span><span data-tr>Hata verip durdu, ne yapacağım?</span></summary>
+            <p>
+              <span data-en>If Instagram is asking us to slow down, leave it an hour and turn the waits up in settings. If it says the answer was unexpected, Instagram has probably changed something at their end — there's a backup route built in, and the browser console will tell you which one it ended up using.</span>
+              <span data-tr>Instagram yavaşlamamızı istiyorsa bir saat ara ver ve ayarlardan bekleme sürelerini artır. Beklenmedik bir cevap geldiğini söylüyorsa büyük ihtimalle Instagram tarafında bir şey değişmiştir — içinde yedek bir yol var, tarayıcı konsolu hangisini kullandığını yazıyor.</span>
+            </p>
+          </details>
+          <details>
+            <summary><span data-en>Can I undo an unfollow?</span><span data-tr>Bıraktığım takibi geri alabilir miyim?</span></summary>
+            <p>
+              <span data-en>Not from here. Save the list as CSV or JSON before you start — that file is the only record you'll have afterwards. And if you unfollow a private account, you'll have to ask to follow them all over again.</span>
+              <span data-tr>Buradan alamazsın. Başlamadan önce listeyi CSV ya da JSON olarak kaydet — sonrasında elindeki tek kayıt o olacak. Gizli bir hesabı bıraktıysan tekrar istek göndermen gerekecek.</span>
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="shell">
+        <span class="sq"></span>
+        <span><span data-en>Not connected to Instagram or Meta in any way.</span><span data-tr>Instagram veya Meta ile hiçbir bağlantısı yok.</span></span>
+        <span><span data-en>MIT licensed — use it on your own account, at your own risk</span><span data-tr>MIT lisanslı — kendi hesabında, kendi sorumluluğunda kullan</span></span>
+      </div>
+    </footer>
+
+    <script>
+      const PAYLOAD = __PAYLOAD__;
+
+      document.getElementById("code").textContent = PAYLOAD;
+
+      const copyBtn = document.getElementById("copy");
+      const copyLabel = copyBtn.innerHTML;
+      copyBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(PAYLOAD);
+        } catch {
+          const ta = document.createElement("textarea");
+          ta.value = PAYLOAD;
+          ta.style.cssText = "position:fixed;opacity:0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+        copyBtn.classList.add("done");
+        copyBtn.textContent = document.documentElement.lang === "tr" ? "Kopyalandı ✓" : "Copied ✓";
+        setTimeout(() => {
+          copyBtn.classList.remove("done");
+          copyBtn.innerHTML = copyLabel;
+        }, 2200);
+      });
+
+      const langBtn = document.getElementById("lang");
+      const setLang = (lang) => {
+        document.documentElement.lang = lang;
+        langBtn.textContent = lang === "tr" ? "EN" : "TR";
+        try {
+          localStorage.setItem("fc_lang", lang);
+        } catch {}
+      };
+      langBtn.addEventListener("click", () => setLang(document.documentElement.lang === "tr" ? "en" : "tr"));
+
+      let initial = null;
+      try {
+        initial = localStorage.getItem("fc_lang");
+      } catch {}
+      setLang(initial || (/^tr/i.test(navigator.language || "") ? "tr" : "en"));
+    </script>
+  </body>
+</html>
