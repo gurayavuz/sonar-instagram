@@ -4,8 +4,6 @@
 follow you back — with search, filters, a keep-list, CSV/JSON export, and a deliberately slow
 bulk unfollow. Everything runs in your own tab; there is no backend.
 
-Built as a from-scratch reimplementation of the approach used by
-[instagram.cobanov.dev](https://instagram.cobanov.dev/) ([source](https://github.com/cobanov/instagram)).
 
 ## Layout
 
